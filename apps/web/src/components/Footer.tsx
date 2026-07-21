@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="border-t border-white/5 bg-background mt-20">
@@ -22,7 +24,11 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Para Produtores</h4>
             <ul className="space-y-2 text-sm text-orbit-text-muted">
-              <li>Criar Evento</li>
+              <li>
+                <Link href="/produtor" className="hover:text-cyan-400 transition-colors">
+                  Criar Evento
+                </Link>
+              </li>
               <li>Taxas e Preços</li>
               <li>Integrações</li>
             </ul>

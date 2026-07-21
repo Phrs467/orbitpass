@@ -9,5 +9,9 @@
     "dev:api": "npm run start:dev -w apps/api",
     "dev:web": "npm run dev -w apps/web -- -p 3005",
     "dev": "npx concurrently \"npm run dev:api\" \"npm run dev:web\""
+  },
+  "dependencies": {
+    "caniuse-lite": "1.0.30001610",
+    "lodash": "^4.18.1"
   }
 }

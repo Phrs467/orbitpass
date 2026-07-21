@@ -3,90 +3,230 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model User {
-  id               String   @id @default(uuid())
-  name             String
-  email            String   @unique
-  passwordHash     String
-  cpfEncrypted     String   @unique
-  role             String   // ADMIN, PRODUCER, CUSTOMER
-  isVerified       Boolean  @default(false)
-  stripeAccountId  String?
-  createdAt        DateTime @default(now())
-
-  events           Event[]
-  ownedTickets     Ticket[] @relation("TicketOwner")
-  transactionsFrom Transaction[] @relation("TxFrom")
-  transactionsTo   Transaction[] @relation("TxTo")
+enum FuncaoUsuario {
+  PRODUTOR
+  CLIENTE
+  ADMIN
+  STAFF
 }
 
-model Event {
-  id             String   @id @default(uuid())
-  producerId     String
-  name           String
-  description    String?
-  location       String
-  date           DateTime
-  status         String   // DRAFT, PUBLISHED, CANCELLED, FINISHED
-  createdAt      DateTime @default(now())
-
-  producer       User     @relation(fields: [producerId], references: [id])
-  ticketLots     TicketLot[]
+enum TipoPessoa {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
 }
 
-model TicketLot {
-  id               String   @id @default(uuid())
-  eventId          String
-  name             String
-  price            Decimal
-  totalQuantity    Int
-  soldQuantity     Int      @default(0)
-  platformFeePct   Decimal
-  status           String   // ACTIVE, EXHAUSTED, CLOSED
+enum StatusEvento {
+  RASCUNHO
+  PUBLICADO
+  CANCELADO
+  FINALIZADO
+}
+
+enum TipoSetor {
+  PISTA
+  CAMAROTE
+  MESA
+  CADEIRA
+}
+
+enum StatusLote {
+  ATIVO
+  ESGOTADO
+  ENCERRADO
+}
+
+enum StatusIngresso {
+  DISPONIVEL
+  RESERVADO
+  VENDIDO
+  EM_REVENDA
+  CHECKED_IN
+}
+
+enum TipoTransacao {
+  COMPRA_DIRETA
+  TRANSFERENCIA
+  REVENDA
+}
+
+enum StatusTransacao {
+  PENDENTE
+  CONCLUIDO
+  ESCROW
+  REEMBOLSADO
+}
+
+model Usuario {
+  id                  String             @id @default(uuid())
+  firebaseUid         String?            @unique
+  nome                String
+  email               String             @unique
+  senhaHash           String?
+  tipoPessoa          TipoPessoa         @default(PESSOA_FISICA)
+  cpf                 String?            @unique
+  cnpj                String?            @unique
+  razaoSocial         String?
+  nomeFantasia        String?
+  telefone            String?
+  funcao              FuncaoUsuario      @default(CLIENTE)
+  isVerificado        Boolean            @default(false)
+  fotoUrl             String?
+  dataCriacao         DateTime           @default(now())
+
+  eventos             Evento[]
+  ingressosComprados  Ingresso[]         @relation("ProprietarioIngresso")
+  transacoesEnviadas  Transacao[]        @relation("TransacaoDe")
+  transacoesRecebidas Transacao[]        @relation("TransacaoPara")
+}
+
+model Evento {
+  id           String       @id @default(uuid())
+  produtorId   String
+  titulo       String
+  descricao    String?
+  cidade       String
+  estado       String
+  local        String
+  categoria    String       @default("Show")
+  dataInicio       DateTime
+  dataFim          DateTime?
+  bannerUrl        String?
+  logoUrl          String?
+  mapaGeralUrl     String?
+  mapaCamarotesUrl String?
+  status           StatusEvento @default(PUBLICADO)
+  dataCriacao      DateTime     @default(now())
+
+  produtor         Usuario      @relation(fields: [produtorId], references: [id])
+  lotes            Lote[]
+  cupons           Cupom[]
+  setores          Setor[]
+  modelosCamarote  ModeloCamarote[]
+}
+
+model Setor {
+  id          String    @id @default(uuid())
+  eventoId    String
+  nome        String
+  tipo        TipoSetor @default(PISTA)
+  dataCriacao DateTime  @default(now())
+
+  evento      Evento    @relation(fields: [eventoId], references: [id])
+  lotes       Lote[]
+  camarotes   Camarote[]
+}
+
+model ModeloCamarote {
+  id          String   @id @default(uuid())
+  eventoId    String
+  nome        String   // e.g. Gold, Premium
+  descricao   String?  // O que inclui no camarote
+  preco       Decimal
+  capacidade  Int      @default(10)
+  dataCriacao DateTime @default(now())
+
+  evento      Evento   @relation(fields: [eventoId], references: [id])
+  camarotes   Camarote[]
+}
+
+model Camarote {
+  id               String          @id @default(uuid())
+  setorId          String
+  modeloId         String
+  codigo           String          // e.g. A1, A2, B1
+  status           StatusLote      @default(ATIVO)
+  dataCriacao      DateTime        @default(now())
   
-  event            Event    @relation(fields: [eventId], references: [id])
-  tickets          Ticket[]
+  setor            Setor           @relation(fields: [setorId], references: [id])
+  modelo           ModeloCamarote  @relation(fields: [modeloId], references: [id])
+  ingressos        Ingresso[]      // Ingressos vinculados a este camarote
 }
 
-model Ticket {
-  id                 String   @id @default(uuid())
-  lotId              String
-  currentOwnerId     String
-  status             String   // AVAILABLE, RESERVED, SOLD, RESELLING, CHECKED_IN
-  dynamicQrSecret    String
+model Lote {
+  id                String     @id @default(uuid())
+  eventoId          String
+  nome              String
+  preco             Decimal
+  quantidadeTotal   Int
+  quantidadeVendida Int        @default(0)
+  limitePorCpf      Int        @default(4)
+  status            StatusLote @default(ATIVO)
+  setorId           String?    // Vinculado a um Setor (opcional para retrocompatibilidade)
+  dataCriacao       DateTime   @default(now())
   
-  lot                TicketLot @relation(fields: [lotId], references: [id])
-  currentOwner       User      @relation("TicketOwner", fields: [currentOwnerId], references: [id])
-  transactions       Transaction[]
-  checkin            Checkin?
+  evento            Evento     @relation(fields: [eventoId], references: [id])
+  setor             Setor?     @relation(fields: [setorId], references: [id])
+  ingressos         Ingresso[]
 }
 
-model Transaction {
-  id                 String   @id @default(uuid())
-  ticketId           String
-  fromUserId         String?
-  toUserId           String
-  type               String   // PRIMARY_SALE, TRANSFER, RESALE
-  amount             Decimal
-  platformFee        Decimal
-  status             String   // PENDING, COMPLETED, ESCROW, REFUNDED
-  stripePaymentId    String?
-  escrowReleaseDate  DateTime?
-  createdAt          DateTime @default(now())
+model Cupom {
+  id                 String       @id @default(uuid())
+  eventoId          String
+  codigo             String
+  descontoPercentual Decimal?
+  descontoValor     Decimal?
+  quantidadeMax      Int
+  quantidadeUsada    Int          @default(0)
+  ativo             Boolean      @default(true)
+  dataCriacao        DateTime     @default(now())
 
-  ticket             Ticket   @relation(fields: [ticketId], references: [id])
-  fromUser           User?    @relation("TxFrom", fields: [fromUserId], references: [id])
-  toUser             User     @relation("TxTo", fields: [toUserId], references: [id])
+  evento             Evento       @relation(fields: [eventoId], references: [id])
+  vendas             VendaCupom[]
+}
+
+model Ingresso {
+  id            String         @id @default(uuid())
+  loteId        String?
+  camaroteId    String?
+  compradorId   String
+  status        StatusIngresso @default(VENDIDO)
+  codigoSegredo String
+  dataCriacao   DateTime       @default(now())
+  
+  lote          Lote?          @relation(fields: [loteId], references: [id])
+  camarote      Camarote?      @relation(fields: [camaroteId], references: [id])
+  comprador     Usuario        @relation("ProprietarioIngresso", fields: [compradorId], references: [id])
+  transacoes    Transacao[]
+  checkin       Checkin?
+  vendaCupom    VendaCupom?
+}
+
+model VendaCupom {
+  id            String   @id @default(uuid())
+  ingressoId    String   @unique
+  cupomId       String
+  valorDesconto Decimal
+  dataCriacao   DateTime @default(now())
+
+  ingresso      Ingresso @relation(fields: [ingressoId], references: [id])
+  cupom         Cupom    @relation(fields: [cupomId], references: [id])
+}
+
+model Transacao {
+  id             String          @id @default(uuid())
+  ingressoId     String
+  deUsuarioId    String?
+  paraUsuarioId  String
+  tipo           TipoTransacao   @default(COMPRA_DIRETA)
+  valor          Decimal
+  taxaPlataforma Decimal         @default(0)
+  status         StatusTransacao @default(CONCLUIDO)
+  dataCriacao    DateTime        @default(now())
+
+  ingresso       Ingresso        @relation(fields: [ingressoId], references: [id])
+  deUsuario      Usuario?        @relation("TransacaoDe", fields: [deUsuarioId], references: [id])
+  paraUsuario    Usuario         @relation("TransacaoPara", fields: [paraUsuarioId], references: [id])
 }
 
 model Checkin {
-  id             String   @id @default(uuid())
-  ticketId       String   @unique
-  validatedAt    DateTime @default(now())
-  validatorId    String
+  id          String   @id @default(uuid())
+  ingressoId  String   @unique
+  validadoEm  DateTime @default(now())
+  validadorId String
 
-  ticket         Ticket   @relation(fields: [ticketId], references: [id])
+  ingresso    Ingresso @relation(fields: [ingressoId], references: [id])
 }

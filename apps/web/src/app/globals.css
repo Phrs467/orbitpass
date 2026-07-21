@@ -1,98 +1,70 @@
-@import "tailwindcss";
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-outfit), var(--font-inter), sans-serif;
-
-  --color-orbit-dark: #030712; /* Deepest blue/black */
-  --color-orbit-dark-light: #0B1221;
-  --color-orbit-blue: #00E5FF;
-  --color-orbit-purple: #9D00FF;
-  
-  --color-orbit-text: #FFFFFF;
-  --color-orbit-text-muted: #94A3B8;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #030712;
+  --background: #060814;
   --foreground: #ffffff;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
   min-height: 100vh;
-  /* Deep, sophisticated dark gradient matching the brand colors */
   background-image: 
-    radial-gradient(ellipse at top left, rgba(157, 0, 255, 0.15) 0%, transparent 40%),
-    radial-gradient(ellipse at bottom right, rgba(0, 229, 255, 0.15) 0%, transparent 40%);
+    radial-gradient(ellipse at 20% 20%, rgba(0, 240, 255, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 60%),
+    radial-gradient(circle at 50% 30%, rgba(13, 10, 40, 0.9) 0%, #060814 100%);
   background-attachment: fixed;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Premium Dark Cards (No solid white blocks!) */
+/* Scrollbar Futurista PASS */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #060814;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00f0ff 0%, #a855f7 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+}
+
+/* Suporte Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #00f0ff #060814;
+}
+
+/* Cards em estilo Space Glassmorphic */
 .glass-card {
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  transition: all 0.3s ease;
+  background: rgba(11, 14, 38, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 20px;
+  transition: all 0.25s ease;
 }
+
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(0, 229, 255, 0.2);
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
 }
 
-.ticket-card {
-  background-color: #0B1221;
-  border-radius: 24px;
-  color: white;
-  box-shadow: 0 24px 50px -12px rgba(0, 0, 0, 0.8);
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.08);
+/* Ocultar Setas Nativas do Windows/Navegador em inputs numéricos */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-.ticket-ring-1 {
-  position: absolute;
-  width: 250px;
-  height: 100px;
-  border-radius: 50%;
-  border: 3px solid var(--color-orbit-blue);
-  transform: rotate(-15deg);
-  opacity: 0.8;
-  filter: blur(1px);
-}
-
-.ticket-ring-2 {
-  position: absolute;
-  width: 300px;
-  height: 150px;
-  border-radius: 50%;
-  border: 3px solid var(--color-orbit-purple);
-  transform: rotate(15deg);
-  opacity: 0.7;
-  filter: blur(1px);
-}
-
-.brand-gradient-text {
-  background: linear-gradient(90deg, var(--color-orbit-blue) 0%, var(--color-orbit-purple) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
-}
-
-.btn-primary {
-  background: linear-gradient(90deg, rgba(0, 229, 255, 0.8) 0%, rgba(157, 0, 255, 0.8) 100%);
-  color: white;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  font-weight: 600;
-}
-.btn-primary:hover {
-  background: linear-gradient(90deg, rgba(0, 229, 255, 1) 0%, rgba(157, 0, 255, 1) 100%);
-  box-shadow: 0 0 20px rgba(157, 0, 255, 0.3);
+input[type="number"] {
+  -moz-appearance: textfield;
 }
