@@ -34,6 +34,8 @@ async function ensureTables() {
     await sql`ALTER TABLE "Evento" ADD COLUMN IF NOT EXISTS "areas" JSONB`;
     await sql`ALTER TABLE "Evento" ADD COLUMN IF NOT EXISTS "cupons" JSONB`;
     await sql`ALTER TABLE "Evento" ADD COLUMN IF NOT EXISTS "estado" TEXT DEFAULT 'SP'`;
+    await sql`ALTER TABLE "Evento" ADD COLUMN IF NOT EXISTS "mapaGeralUrl" TEXT`;
+    await sql`ALTER TABLE "Evento" ADD COLUMN IF NOT EXISTS "mapaCamarotesUrl" TEXT`;
 
     await sql`
       CREATE TABLE IF NOT EXISTS "Lote" (
@@ -51,6 +53,23 @@ async function ensureTables() {
     await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "quantidadeVendida" INTEGER DEFAULT 0`;
     await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "dataValidade" TEXT`;
     await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'ATIVO'`;
+    
+    // Categorias de Ingressos (Inteira, Meia, Solidária, Idoso)
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "inteiraPreco" NUMERIC`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "inteiraQtd" INTEGER`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "inteiraQtdVendida" INTEGER DEFAULT 0`;
+    
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "meiaPreco" NUMERIC`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "meiaQtd" INTEGER`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "meiaQtdVendida" INTEGER DEFAULT 0`;
+    
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "solidariaPreco" NUMERIC`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "solidariaQtd" INTEGER`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "solidariaQtdVendida" INTEGER DEFAULT 0`;
+    
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "idosoPreco" NUMERIC`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "idosoQtd" INTEGER`;
+    await sql`ALTER TABLE "Lote" ADD COLUMN IF NOT EXISTS "idosoQtdVendida" INTEGER DEFAULT 0`;
   } catch (err) {
     console.error("Erro ao verificar/migrar tabelas em português no Neon DB:", err);
   }
@@ -70,6 +89,10 @@ function parseDateToIso(dateStr: string): string {
         const timePart = parts[1] || "20:00:00";
         return `${year}-${month}-${day}T${timePart}.000Z`;
       }
+    }
+    // Retorna a string exata caso já seja um formato válido T, sem converter para UTC
+    if (dateStr.includes("T")) {
+       return dateStr;
     }
     const d = new Date(dateStr);
     if (!isNaN(d.getTime())) return d.toISOString();
@@ -99,6 +122,8 @@ export async function GET(request: Request) {
           e."dataInicio",
           e."dataFim",
           e."bannerUrl",
+          e."mapaGeralUrl",
+          e."mapaCamarotesUrl",
           e."status",
           e."classificacao",
           e."produtorId",
@@ -128,6 +153,8 @@ export async function GET(request: Request) {
           e."dataInicio",
           e."dataFim",
           e."bannerUrl",
+          e."mapaGeralUrl",
+          e."mapaCamarotesUrl",
           e."status",
           e."classificacao",
           e."produtorId",
@@ -155,13 +182,18 @@ export async function GET(request: Request) {
       title: e.titulo || e.title || "Novo Evento",
       cidade: e.cidade || e.city || "São Paulo",
       city: e.cidade || e.city || "São Paulo",
+      estado: e.estado || "SP",
       local: e.local || e.location || "Arena Principal",
       location: e.local || e.location || "Arena Principal",
       categoria: e.categoria || "SHOW",
       date: e.dataInicio ? new Date(e.dataInicio).toLocaleDateString("pt-BR") : "30/12/2024",
-      dataInicio: e.dataInicio ? new Date(e.dataInicio).toLocaleDateString("pt-BR") : "30/12/2024",
+      dataInicio: e.dataInicio || null,
       status: e.status || "PUBLICADO",
       classificacao: e.classificacao || 0,
+      descricao: e.descricao || "",
+      description: e.descricao || "",
+      mapaGeralUrl: e.mapaGeralUrl || null,
+      mapaCamarotesUrl: e.mapaCamarotesUrl || null,
       totalCapacity: e.capacidadeTotal || 1000,
       ticketsSold: e.ingressosVendidos || 0,
       revenue: e.receita || "0,00",
@@ -192,7 +224,9 @@ export async function POST(request: Request) {
       estado = "SP",
       location = "Arena Principal",
       date = "30/12/2024",
+      categoria = "SHOW",
       status = "PUBLICADO",
+      classificacao = 0,
       totalCapacity = 1000,
       ticketsSold = 0,
       revenue = "0,00",
@@ -232,7 +266,7 @@ export async function POST(request: Request) {
 
     await sql`
       INSERT INTO "Evento" (
-        "id", "titulo", "descricao", "cidade", "estado", "local", "dataInicio", "status", "produtorId", "capacidadeTotal", "ingressosVendidos", "receita", "areas", "cupons"
+        "id", "titulo", "descricao", "cidade", "estado", "local", "dataInicio", "categoria", "status", "classificacao", "produtorId", "capacidadeTotal", "ingressosVendidos", "receita", "areas", "cupons"
       ) VALUES (
         ${eventId},
         ${title || "Novo Evento"},
@@ -241,7 +275,9 @@ export async function POST(request: Request) {
         ${estado || "SP"},
         ${location},
         ${isoDate}::timestamp,
+        ${categoria},
         ${status},
+        ${classificacao},
         ${realProdutorId},
         ${totalCapacity},
         ${ticketsSold},
@@ -256,7 +292,9 @@ export async function POST(request: Request) {
         "estado" = EXCLUDED."estado",
         "local" = EXCLUDED."local",
         "dataInicio" = EXCLUDED."dataInicio",
+        "categoria" = EXCLUDED."categoria",
         "status" = EXCLUDED."status",
+        "classificacao" = EXCLUDED."classificacao",
         "capacidadeTotal" = EXCLUDED."capacidadeTotal",
         "ingressosVendidos" = EXCLUDED."ingressosVendidos",
         "receita" = EXCLUDED."receita",
@@ -271,12 +309,36 @@ export async function POST(request: Request) {
       if (area.lots && Array.isArray(area.lots)) {
         for (const lot of area.lots) {
           const lotId = lot.id || `lote-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
-          const priceNum = parseFloat((lot.price || "0").toString().replace(",", ".")) || 0;
-          const qty = parseInt(lot.quantity || lot.total || "100", 10) || 100;
+          
+          const inteiraP = lot.inteiraPreco ? parseFloat(lot.inteiraPreco.toString().replace(",", ".")) : null;
+          const meiaP = lot.meiaPreco ? parseFloat(lot.meiaPreco.toString().replace(",", ".")) : null;
+          const solidariaP = lot.solidariaPreco ? parseFloat(lot.solidariaPreco.toString().replace(",", ".")) : null;
+          const idosoP = lot.idosoPreco ? parseFloat(lot.idosoPreco.toString().replace(",", ".")) : null;
+
+          const prices = [inteiraP, meiaP, solidariaP, idosoP].filter(p => p !== null) as number[];
+          const minCategoryPrice = prices.length > 0 ? Math.min(...prices) : null;
+
+          const priceNum = minCategoryPrice !== null 
+            ? minCategoryPrice 
+            : (parseFloat((lot.price || "0").toString().replace(",", ".")) || 0);
+          
+          const inteiraQtd = lot.inteiraQtd ? parseInt(lot.inteiraQtd, 10) : null;
+          const meiaQtd = lot.meiaQtd ? parseInt(lot.meiaQtd, 10) : null;
+          const solidariaQtd = lot.solidariaQtd ? parseInt(lot.solidariaQtd, 10) : null;
+          const idosoQtd = lot.idosoQtd ? parseInt(lot.idosoQtd, 10) : null;
+
+          const hasCategories = inteiraQtd !== null || meiaQtd !== null || solidariaQtd !== null || idosoQtd !== null;
+          
+          const qty = hasCategories 
+            ? (inteiraQtd || 0) + (meiaQtd || 0) + (solidariaQtd || 0) + (idosoQtd || 0)
+            : (parseInt(lot.quantity || lot.total || "100", 10) || 100);
+            
           const soldNum = parseInt(lot.sold || "0", 10) || 0;
+          
           await sql`
             INSERT INTO "Lote" (
-              "id", "eventoId", "nome", "preco", "quantidadeTotal", "dataValidade", "status", "quantidadeVendida"
+              "id", "eventoId", "nome", "preco", "quantidadeTotal", "dataValidade", "status", "quantidadeVendida",
+              "inteiraPreco", "inteiraQtd", "meiaPreco", "meiaQtd", "solidariaPreco", "solidariaQtd", "idosoPreco", "idosoQtd"
             ) VALUES (
               ${lotId},
               ${eventId},
@@ -285,7 +347,15 @@ export async function POST(request: Request) {
               ${qty},
               ${lot.endDate || null},
               ${lot.status || "ATIVO"},
-              ${soldNum}
+              ${soldNum},
+              ${lot.inteiraPreco ? parseFloat(lot.inteiraPreco.toString().replace(",", ".")) : null},
+              ${inteiraQtd},
+              ${lot.meiaPreco ? parseFloat(lot.meiaPreco.toString().replace(",", ".")) : null},
+              ${meiaQtd},
+              ${lot.solidariaPreco ? parseFloat(lot.solidariaPreco.toString().replace(",", ".")) : null},
+              ${solidariaQtd},
+              ${lot.idosoPreco ? parseFloat(lot.idosoPreco.toString().replace(",", ".")) : null},
+              ${idosoQtd}
             )
             ON CONFLICT ("id") DO NOTHING;
           `;
@@ -344,6 +414,27 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true, message: "Evento excluído com sucesso." });
   } catch (error: any) {
     console.error("Erro ao excluir evento no Neon DB:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  await ensureTables();
+  try {
+    const body = await request.json();
+    const { id, cupons } = body;
+    if (!id || !cupons) {
+      return NextResponse.json({ success: false, error: "Missing id or cupons" }, { status: 400 });
+    }
+    const cuponsJson = JSON.stringify(cupons);
+    await sql`
+      UPDATE "Evento" 
+      SET "cupons" = ${cuponsJson}::jsonb
+      WHERE "id" = ${id}
+    `;
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Erro ao atualizar cupons:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

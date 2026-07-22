@@ -56,7 +56,7 @@ export function OrbitSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border transition-all duration-200 cursor-pointer ${
+        className={`w-full h-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border transition-all duration-200 cursor-pointer ${
           isOpen
             ? "border-cyan-400/80 shadow-[0_0_20px_rgba(0,240,255,0.25)] bg-white/10"
             : "border-white/10 hover:border-white/20"

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, MapPin, Calendar, ArrowRight } from "lucide-react";
+import { Search, MapPin, Calendar, ArrowRight, Ticket } from "lucide-react";
 
 const mockEvents = [
   { id: 1, name: "Galaxy Fest '24", date: "25 JUN", location: "São Paulo, SP", price: 120, img: "https://images.unsplash.com/photo-1540039155732-d68a29a101b7?q=80&w=800&auto=format&fit=crop" },
@@ -59,13 +59,10 @@ export default function EventsPage() {
                   <span>{event.location}</span>
                 </div>
 
-                <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                  <div>
-                     <span className="text-xs text-white/50 block">A partir de</span>
-                     <span className="text-lg font-bold text-white">R$ {event.price}</span>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-orbit-blue group-hover:text-black transition-colors">
-                     <ArrowRight className="w-4 h-4" />
+                <div className="pt-4 border-t border-white/10 mt-auto">
+                  <div className="w-full py-3 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-black flex items-center justify-center gap-2 font-black text-sm transition-colors">
+                    <Ticket className="w-4 h-4" />
+                    <span>Ingressos</span>
                   </div>
                 </div>
               </div>

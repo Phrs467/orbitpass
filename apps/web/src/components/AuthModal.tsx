@@ -267,6 +267,7 @@ export function AuthModal({ isOpen, onClose, initialMode = "login", initialRole 
           razaoSocial: u.razaoSocial,
           nomeFantasia: u.nomeFantasia,
           phone: u.telefone,
+          dataNascimento: u.dataNascimento,
           isVerificado: u.isVerificado,
         };
         localStorage.setItem("pass_user", JSON.stringify(sessionUser));
@@ -330,6 +331,7 @@ export function AuthModal({ isOpen, onClose, initialMode = "login", initialRole 
         razaoSocial: u.razaoSocial,
         nomeFantasia: u.nomeFantasia,
         phone: u.telefone,
+        dataNascimento: u.dataNascimento,
         isVerificado: true,
       };
 

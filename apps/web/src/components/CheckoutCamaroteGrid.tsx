@@ -5,13 +5,13 @@ import { Check, Info } from "lucide-react";
 
 interface CheckoutCamaroteGridProps {
   area: any;
-  selectedCell: string | null;
+  selectedCells: string[];
   onSelectCell: (cellId: string, model: any) => void;
   // This could receive a list of sold cells in the future
   soldCells?: string[];
 }
 
-export function CheckoutCamaroteGrid({ area, selectedCell, onSelectCell, soldCells = [] }: CheckoutCamaroteGridProps) {
+export function CheckoutCamaroteGrid({ area, selectedCells, onSelectCell, soldCells = [] }: CheckoutCamaroteGridProps) {
   const rows = area.gridConfig?.rows || area.rows || 5;
   const cols = area.gridConfig?.cols || area.cols || 10;
   
@@ -55,7 +55,7 @@ export function CheckoutCamaroteGrid({ area, selectedCell, onSelectCell, soldCel
                     
                     const isConfigured = !!model;
                     const isSold = soldCells.includes(cellId);
-                    const isSelected = selectedCell === cellId;
+                    const isSelected = selectedCells.includes(cellId);
 
                     if (!isConfigured) {
                       return (
@@ -103,7 +103,7 @@ export function CheckoutCamaroteGrid({ area, selectedCell, onSelectCell, soldCel
         {models.map((m: any) => (
           <div key={m.id} className="flex items-center gap-1.5 text-[10px] text-slate-400">
             <div className={`w-3 h-3 rounded-sm ${m.color} opacity-70`}></div>
-            <span>{m.name} (<span className="font-mono text-cyan-400">R$ {m.price}</span>)</span>
+            <span>{m.name} (<span className="font-mono text-cyan-400">R$ {m.price}</span><span className="text-[9px] text-slate-500 font-bold ml-1">+ taxas</span>)</span>
           </div>
         ))}
       </div>

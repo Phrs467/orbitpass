@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { authenticator } from 'otplib';
+import * as otplib from 'otplib';
+const authenticator = (otplib as any).authenticator || (otplib as any);
 
 @Injectable()
 export class TicketsService {

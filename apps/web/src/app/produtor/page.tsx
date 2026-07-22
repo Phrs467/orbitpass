@@ -20,6 +20,10 @@ const CITIES = [
   "Salvador",
 ];
 
+const ESTADOS = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
+
 const COUPON_TYPES = [
   { value: "PERCENTUAL", label: "Porcentagem (%)" },
   { value: "VALOR_FIXO", label: "Valor Fixo (R$)" },
@@ -31,6 +35,17 @@ const AGE_RATING_OPTIONS = [
   { value: "12", label: "12+" },
   { value: "16", label: "16+" },
   { value: "18", label: "18+" },
+];
+
+const CATEGORIAS = [
+  "Show",
+  "Esportes",
+  "Festivais",
+  "Teatro",
+  "Stand-up",
+  "Evento Corporativo",
+  "Festas",
+  "Workshop"
 ];
 
 export default function ProducerDashboardPage() {
@@ -58,8 +73,11 @@ export default function ProducerDashboardPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newCity, setNewCity] = useState("São Paulo");
+  const [newEstado, setNewEstado] = useState("SP");
   const [newLocation, setNewLocation] = useState("");
   const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("20:00");
+  const [newCategoria, setNewCategoria] = useState("Show");
   const [newClassificacao, setNewClassificacao] = useState("0");
   const [areas, setAreas] = useState<any[]>([
     {
@@ -131,8 +149,10 @@ export default function ProducerDashboardPage() {
       title: newTitle || "Novo Evento",
       descricao: newDescription,
       city: newCity,
+      estado: newEstado,
       location: newLocation || "Arena Principal",
-      date: newDate || "30/12/2024",
+      date: (newDate && newTime) ? `${newDate}T${newTime}:00` : newDate || "30/12/2024",
+      categoria: newCategoria,
       classificacao: parseInt(newClassificacao, 10) || 0,
       status: "PUBLICADO",
       totalCapacity: calculatedCapacity > 0 ? calculatedCapacity : 1000,
@@ -448,6 +468,7 @@ export default function ProducerDashboardPage() {
                         setEditingEventId(null);
                         setNewTitle("");
                         setNewCity("São Paulo");
+                        setNewEstado("SP");
                         setNewLocation("");
                         setNewDate("");
                         setAreas([{
@@ -548,9 +569,25 @@ export default function ProducerDashboardPage() {
                                   onClick={() => {
                                     setEditingEventId(evt.id);
                                     setNewTitle(evt.title);
+                                    setNewDescription(evt.descricao || evt.description || "");
                                     setNewCity(evt.city);
+                                    setNewEstado(evt.estado || "SP");
                                     setNewLocation(evt.location);
-                                    setNewDate(evt.date);
+                                    let dValue = evt.date || "";
+                                    let tValue = "20:00";
+                                    if (evt.dataInicio) {
+                                      const dObj = new Date(evt.dataInicio);
+                                      if (!isNaN(dObj.getTime())) {
+                                        dValue = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
+                                        tValue = `${String(dObj.getHours()).padStart(2,'0')}:${String(dObj.getMinutes()).padStart(2,'0')}`;
+                                      }
+                                    } else if (dValue.includes("/")) {
+                                      const [d, m, y] = dValue.split("/");
+                                      dValue = `${y}-${m}-${d}`;
+                                    }
+                                    setNewDate(dValue);
+                                    setNewTime(tValue);
+                                    setNewCategoria(evt.categoria || "Show");
                                     setNewClassificacao(String(evt.classificacao || 0));
                                     setAreas(evt.areas || []);
                                     setViewTab("create-event");
@@ -774,8 +811,11 @@ export default function ProducerDashboardPage() {
                         setEditingEventId(null);
                         setNewTitle("");
                         setNewCity("São Paulo");
+                        setNewEstado("SP");
                         setNewLocation("");
                         setNewDate("");
+                        setNewTime("20:00");
+                        setNewCategoria("Show");
                         setNewClassificacao("0");
                         setAreas([{
                           id: "area-1",
@@ -822,15 +862,25 @@ export default function ProducerDashboardPage() {
                               setNewTitle(evt.title); 
                               setNewDescription(evt.descricao || evt.description || "");
                               setNewCity(evt.city); 
+                              setNewEstado(evt.estado || "SP");
                               setNewLocation(evt.location); 
                               
                               // Convert DD/MM/YYYY to YYYY-MM-DD for date input
                               let dValue = evt.date || "";
-                              if (dValue.includes("/")) {
+                              let tValue = "20:00";
+                              if (evt.dataInicio) {
+                                const dObj = new Date(evt.dataInicio);
+                                if (!isNaN(dObj.getTime())) {
+                                  dValue = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
+                                  tValue = `${String(dObj.getHours()).padStart(2,'0')}:${String(dObj.getMinutes()).padStart(2,'0')}`;
+                                }
+                              } else if (dValue.includes("/")) {
                                 const [d, m, y] = dValue.split("/");
                                 dValue = `${y}-${m}-${d}`;
                               }
                               setNewDate(dValue); 
+                              setNewTime(tValue);
+                              setNewCategoria(evt.categoria || "Show");
                               
                               setNewClassificacao(String(evt.classificacao || 0)); 
                               setAreas(evt.areas || []); 
@@ -1018,7 +1068,7 @@ export default function ProducerDashboardPage() {
                           <Plus className="w-4 h-4 text-cyan-400" />
                           Criar Novo Cupom
                         </h3>
-                        <form onSubmit={(e) => {
+                        <form onSubmit={async (e) => {
                           e.preventDefault();
                           if (!couponCode || couponEventFilter === 'all') return;
                           const targetEvt = events.find(ev => ev.id === couponEventFilter);
@@ -1030,11 +1080,29 @@ export default function ProducerDashboardPage() {
                             usedCount: 0,
                             revenueGenerated: '0,00',
                           };
-                          const updatedEvent = { ...targetEvt, coupons: [...(targetEvt.coupons || []), newCpn] };
-                          setEvents(events.map(ev => ev.id === couponEventFilter ? updatedEvent : ev));
-                          if (selectedEvent?.id === couponEventFilter) setSelectedEvent(updatedEvent);
-                          setCouponCode('');
-                          setCouponValue('');
+                          const updatedCoupons = [...(targetEvt.coupons || []), newCpn];
+                          const updatedEvent = { ...targetEvt, coupons: updatedCoupons };
+                          
+                          // Save to DB
+                          try {
+                            const res = await fetch("/api/events", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ id: targetEvt.id, cupons: updatedCoupons }),
+                            });
+                            if (res.ok) {
+                              setEvents(events.map(ev => ev.id === couponEventFilter ? updatedEvent : ev));
+                              if (selectedEvent?.id === couponEventFilter) setSelectedEvent(updatedEvent);
+                              setCouponCode('');
+                              setCouponValue('');
+                              setToast({ show: true, title: "Cupom Criado", message: `O cupom ${newCpn.code} foi salvo no evento.` });
+                            } else {
+                              setToast({ show: true, title: "Erro", message: "Não foi possível salvar o cupom." });
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            setToast({ show: true, title: "Erro", message: "Erro de conexão ao salvar cupom." });
+                          }
                         }} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
                           <div>
                             <span className="block text-[10px] text-slate-500 mb-1">Evento *</span>
@@ -1320,7 +1388,7 @@ export default function ProducerDashboardPage() {
                         <div className="space-y-4 pt-2">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-slate-300">Nome Oficial do Evento *</label>
+                              <label className="text-xs font-semibold text-slate-300 block mb-1">Nome Oficial do Evento *</label>
                               <input
                                 type="text"
                                 required
@@ -1332,7 +1400,7 @@ export default function ProducerDashboardPage() {
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-slate-300">Classificação Etária *</label>
+                              <label className="text-xs font-semibold text-slate-300 block mb-1">Classificação Etária *</label>
                               <OrbitSelect
                                 options={AGE_RATING_OPTIONS}
                                 value={newClassificacao}
@@ -1341,10 +1409,21 @@ export default function ProducerDashboardPage() {
                                 className="w-full h-11"
                               />
                             </div>
+                            
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-semibold text-slate-300 block mb-1">Categoria do Evento *</label>
+                              <OrbitSelect
+                                options={CATEGORIAS.map(c => ({ value: c, label: c }))}
+                                value={newCategoria}
+                                onChange={setNewCategoria}
+                                icon={<Tag className="w-4 h-4 text-purple-400" />}
+                                className="w-full h-11"
+                              />
+                            </div>
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-slate-300">Descrição do Evento *</label>
+                            <label className="text-xs font-semibold text-slate-300 block mb-1">Descrição do Evento *</label>
                             <textarea
                               required
                               rows={4}
@@ -1357,7 +1436,7 @@ export default function ProducerDashboardPage() {
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-slate-300">Banner Principal (16:9)</label>
+                              <label className="text-xs font-semibold text-slate-300 block mb-1">Banner Principal (16:9)</label>
                               <div className="w-full h-28 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-500 hover:border-cyan-400 hover:text-cyan-400 transition-colors cursor-pointer bg-slate-900/50">
                                 <Plus className="w-6 h-6 mb-1" />
                                 <span className="text-xs font-bold">Enviar Banner</span>
@@ -1365,7 +1444,7 @@ export default function ProducerDashboardPage() {
                             </div>
                             
                             <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-slate-300">Logo do Evento (1:1)</label>
+                              <label className="text-xs font-semibold text-slate-300 block mb-1">Logo do Evento (1:1)</label>
                               <div className="w-full h-28 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-500 hover:border-cyan-400 hover:text-cyan-400 transition-colors cursor-pointer bg-slate-900/50">
                                 <Plus className="w-6 h-6 mb-1" />
                                 <span className="text-xs font-bold">Enviar Logo</span>
@@ -1402,7 +1481,7 @@ export default function ProducerDashboardPage() {
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-slate-300">Mapa de Camarotes</label>
+                            <label className="text-xs font-semibold text-slate-300 block mb-1">Mapa de Camarotes</label>
                             <div className="w-full h-24 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-500 hover:border-purple-400 hover:text-purple-400 transition-colors cursor-pointer bg-slate-900/50">
                               <span className="text-xs font-bold">Enviar Mapa VIP</span>
                               <span className="text-[10px] mt-1">Grid de Referência Visual</span>
@@ -1432,29 +1511,54 @@ export default function ProducerDashboardPage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                               <label className="text-xs font-semibold text-slate-300 block mb-1">Cidade Sede *</label>
-                              <OrbitSelect
-                                options={CITIES}
-                                value={newCity}
-                                onChange={setNewCity}
-                                icon={<MapPin className="w-4 h-4 text-cyan-400" />}
-                                className="w-full h-11"
-                              />
+                              <div className="flex gap-2">
+                                <OrbitSelect
+                                  options={CITIES}
+                                  value={newCity}
+                                  onChange={setNewCity}
+                                  icon={<MapPin className="w-4 h-4 text-cyan-400" />}
+                                  className="w-full h-11"
+                                />
+                                <OrbitSelect
+                                  options={ESTADOS.map(e => ({ value: e, label: e }))}
+                                  value={newEstado}
+                                  onChange={setNewEstado}
+                                  className="w-24 h-11"
+                                />
+                              </div>
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-slate-300">Data Principal *</label>
-                              <input
-                                type="date"
-                                required
-                                value={newDate}
-                                onChange={(e) => setNewDate(e.target.value)}
-                                className="w-full h-11 bg-slate-900 border border-slate-700 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors"
-                              />
+                              <label className="text-xs font-semibold text-slate-300 block mb-1">Data e Hora Principal *</label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="date"
+                                  required
+                                  value={newDate}
+                                  onChange={(e) => setNewDate(e.target.value)}
+                                  className="w-full h-11 bg-slate-900 border border-slate-700 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors"
+                                />
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="00:00"
+                                  maxLength={5}
+                                  value={newTime}
+                                  onChange={(e) => {
+                                    let val = e.target.value.replace(/[^0-9]/g, "");
+                                    if (val.length > 2) {
+                                      val = val.substring(0, 2) + ":" + val.substring(2, 4);
+                                    }
+                                    setNewTime(val);
+                                  }}
+                                  className="w-24 h-11 bg-slate-900 border border-slate-700 rounded-xl px-0 text-center text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors placeholder:text-slate-600"
+                                />
+                              </div>
                             </div>
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-slate-300">Local (Arena, Casa, Estádio) *</label>
+                            <label className="text-xs font-semibold text-slate-300 block mb-1">Local (Arena, Casa, Estádio) *</label>
                             <input
                               type="text"
                               required
@@ -1551,7 +1655,7 @@ export default function ProducerDashboardPage() {
                               </p>
                               <div className="space-y-3">
                                 {area.lots?.map((l: any, i: number) => (
-                                <div key={i} className="relative group grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                                <div key={i} className="relative group flex flex-col gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800">
                                   <button 
                                     type="button" 
                                     onClick={() => {
@@ -1564,78 +1668,131 @@ export default function ProducerDashboardPage() {
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </button>
-                                  <div>
-                                    <span className="block text-[10px] text-slate-500 mb-1">Nome do Lote</span>
-                                    <div className="relative">
-                                      <input 
-                                        type="text" 
-                                        value={l.name}
-                                        onChange={(e) => {
-                                          const newAreas = [...areas];
-                                          newAreas[idx].lots[i].name = e.target.value;
-                                          setAreas(newAreas);
-                                        }}
-                                        className="bg-slate-950 hover:bg-slate-900 border border-slate-700 hover:border-slate-600 rounded px-2 py-1.5 text-xs text-white font-bold w-full focus:outline-none focus:border-cyan-400 focus:bg-slate-950 transition-colors pr-6 cursor-text"
-                                      />
-                                      <Edit3 className="w-3 h-3 text-slate-500 absolute right-2 top-2 pointer-events-none" />
+                                  
+                                  {/* Linha 1: Nome e Validade */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <span className="block text-[10px] text-slate-500 mb-1">Nome do Lote</span>
+                                      <div className="relative">
+                                        <input 
+                                          type="text" 
+                                          value={l.name}
+                                          onChange={(e) => {
+                                            const newAreas = [...areas];
+                                            newAreas[idx].lots[i].name = e.target.value;
+                                            setAreas(newAreas);
+                                          }}
+                                          className="bg-slate-950 hover:bg-slate-900 border border-slate-700 hover:border-slate-600 rounded px-2 py-2 text-xs text-white font-bold w-full focus:outline-none focus:border-cyan-400 focus:bg-slate-950 transition-colors pr-6 cursor-text"
+                                        />
+                                        <Edit3 className="w-3 h-3 text-slate-500 absolute right-2 top-2.5 pointer-events-none" />
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div>
-                                    <span className="block text-[10px] text-slate-500 mb-1">Preço</span>
-                                    <div className="relative">
-                                      <span className="absolute left-2 top-1.5 text-[10px] text-slate-500">R$</span>
-                                      <input 
-                                        type="number" 
-                                        value={l.price}
-                                        onChange={(e) => {
-                                          const newAreas = [...areas];
-                                          newAreas[idx].lots[i].price = e.target.value;
-                                          setAreas(newAreas);
-                                        }}
-                                        className="bg-slate-950 border border-slate-800 rounded pl-6 pr-2 py-1.5 text-xs text-cyan-400 font-mono font-bold w-full focus:outline-none focus:border-cyan-400"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <span className="block text-[10px] text-slate-500 mb-1">Carga</span>
-                                    <div className="relative">
-                                      <input 
-                                        type="number" 
-                                        value={l.quantity}
-                                        onChange={(e) => {
-                                          const newAreas = [...areas];
-                                          newAreas[idx].lots[i].quantity = e.target.value;
-                                          setAreas(newAreas);
-                                        }}
-                                        className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-white font-bold w-full focus:outline-none focus:border-cyan-400"
-                                      />
-                                      <span className="absolute right-2 top-1.5 text-[10px] text-slate-500">un.</span>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <span className="block text-[10px] text-slate-500 mb-1">Válido até</span>
-                                    <div className="relative">
-                                      <input 
-                                        type="text" 
-                                        placeholder="DD/MM/AAAA HH:MM"
-                                        value={l.endDate || ""}
-                                        onChange={(e) => {
-                                          let val = e.target.value.replace(/[^0-9]/g, '');
-                                          if (val.length > 12) val = val.substring(0, 12);
-                                          
-                                          // Máscara DD/MM/AAAA HH:MM
-                                          let masked = val;
-                                          if (val.length > 2) masked = val.substring(0, 2) + '/' + val.substring(2);
-                                          if (val.length > 4) masked = masked.substring(0, 5) + '/' + masked.substring(5);
-                                          if (val.length > 8) masked = masked.substring(0, 10) + ' ' + masked.substring(10);
-                                          if (val.length > 10) masked = masked.substring(0, 13) + ':' + masked.substring(13);
+                                    <div>
+                                      <span className="block text-[10px] text-slate-500 mb-1">Válido até</span>
+                                      <div className="relative">
+                                        <input 
+                                          type="text" 
+                                          placeholder="DD/MM/AAAA HH:MM"
+                                          value={l.endDate || ""}
+                                          onChange={(e) => {
+                                            let val = e.target.value.replace(/[^0-9]/g, '');
+                                            if (val.length > 12) val = val.substring(0, 12);
+                                            
+                                            // Máscara DD/MM/AAAA HH:MM
+                                            let masked = val;
+                                            if (val.length > 2) masked = val.substring(0, 2) + '/' + val.substring(2);
+                                            if (val.length > 4) masked = masked.substring(0, 5) + '/' + masked.substring(5);
+                                            if (val.length > 8) masked = masked.substring(0, 10) + ' ' + masked.substring(10);
+                                            if (val.length > 10) masked = masked.substring(0, 13) + ':' + masked.substring(13);
 
-                                          const newAreas = [...areas];
-                                          newAreas[idx].lots[i].endDate = masked;
-                                          setAreas(newAreas);
-                                        }}
-                                        className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-white font-mono font-bold w-full focus:outline-none focus:border-cyan-400 placeholder:text-slate-700"
-                                      />
+                                            const newAreas = [...areas];
+                                            newAreas[idx].lots[i].endDate = masked;
+                                            setAreas(newAreas);
+                                          }}
+                                          className="bg-slate-950 border border-slate-800 rounded px-2 py-2 text-xs text-white font-mono font-bold w-full focus:outline-none focus:border-cyan-400 placeholder:text-slate-700"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Linha 2: Categorias (Inteira, Meia, Solidária, Idoso) */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                    {/* Inteira */}
+                                    <div className="flex flex-col bg-slate-950 p-3 rounded-xl border border-slate-800/80 shadow-inner">
+                                      <span className="block text-[10px] text-cyan-400 font-bold uppercase tracking-widest text-center mb-2 pb-1 border-b border-slate-800/50">Inteira</span>
+                                      <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                          <span className="absolute left-2 top-1.5 text-[9px] text-slate-500">R$</span>
+                                          <input 
+                                            type="number" 
+                                            placeholder="0.00" 
+                                            value={l.inteiraPreco || ""} 
+                                            onChange={(e) => { 
+                                              const a = [...areas]; 
+                                              const val = e.target.value;
+                                              a[idx].lots[i].inteiraPreco = val; 
+                                              
+                                              // Auto-preenche 50% nas outras categorias
+                                              if (val && !isNaN(parseFloat(val))) {
+                                                const half = (parseFloat(val) / 2).toString();
+                                                a[idx].lots[i].meiaPreco = half;
+                                                a[idx].lots[i].solidariaPreco = half;
+                                                a[idx].lots[i].idosoPreco = half;
+                                              } else if (!val) {
+                                                // Limpa os outros se a inteira for apagada
+                                                a[idx].lots[i].meiaPreco = "";
+                                                a[idx].lots[i].solidariaPreco = "";
+                                                a[idx].lots[i].idosoPreco = "";
+                                              }
+                                              
+                                              setAreas(a); 
+                                            }} 
+                                            className="bg-slate-900 border border-slate-800 rounded pl-6 pr-2 py-1.5 text-xs text-white font-mono w-full focus:border-cyan-500/50 focus:outline-none transition-colors" 
+                                          />
+                                        </div>
+                                        <div className="relative flex-1">
+                                          <input type="number" placeholder="Qtd" value={l.inteiraQtd || ""} onChange={(e) => { const a = [...areas]; a[idx].lots[i].inteiraQtd = e.target.value; setAreas(a); }} className="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white font-mono w-full focus:border-cyan-500/50 focus:outline-none transition-colors text-center" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {/* Meia */}
+                                    <div className="flex flex-col bg-slate-950 p-3 rounded-xl border border-slate-800/80 shadow-inner">
+                                      <span className="block text-[10px] text-purple-400 font-bold uppercase tracking-widest text-center mb-2 pb-1 border-b border-slate-800/50">Meia Entrada</span>
+                                      <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                          <span className="absolute left-2 top-1.5 text-[9px] text-slate-500">R$</span>
+                                          <input type="number" placeholder="0.00" value={l.meiaPreco || ""} onChange={(e) => { const a = [...areas]; a[idx].lots[i].meiaPreco = e.target.value; setAreas(a); }} className="bg-slate-900 border border-slate-800 rounded pl-6 pr-2 py-1.5 text-xs text-white font-mono w-full focus:border-purple-500/50 focus:outline-none transition-colors" />
+                                        </div>
+                                        <div className="relative flex-1">
+                                          <input type="number" placeholder="Qtd" value={l.meiaQtd || ""} onChange={(e) => { const a = [...areas]; a[idx].lots[i].meiaQtd = e.target.value; setAreas(a); }} className="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white font-mono w-full focus:border-purple-500/50 focus:outline-none transition-colors text-center" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {/* Solidária */}
+                                    <div className="flex flex-col bg-slate-950 p-3 rounded-xl border border-slate-800/80 shadow-inner">
+                                      <span className="block text-[10px] text-emerald-400 font-bold uppercase tracking-widest text-center mb-2 pb-1 border-b border-slate-800/50">Solidária</span>
+                                      <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                          <span className="absolute left-2 top-1.5 text-[9px] text-slate-500">R$</span>
+                                          <input type="number" placeholder="0.00" value={l.solidariaPreco || ""} onChange={(e) => { const a = [...areas]; a[idx].lots[i].solidariaPreco = e.target.value; setAreas(a); }} className="bg-slate-900 border border-slate-800 rounded pl-6 pr-2 py-1.5 text-xs text-white font-mono w-full focus:border-emerald-500/50 focus:outline-none transition-colors" />
+                                        </div>
+                                        <div className="relative flex-1">
+                                          <input type="number" placeholder="Qtd" value={l.solidariaQtd || ""} onChange={(e) => { const a = [...areas]; a[idx].lots[i].solidariaQtd = e.target.value; setAreas(a); }} className="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white font-mono w-full focus:border-emerald-500/50 focus:outline-none transition-colors text-center" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {/* Idoso */}
+                                    <div className="flex flex-col bg-slate-950 p-3 rounded-xl border border-slate-800/80 shadow-inner">
+                                      <span className="block text-[10px] text-amber-400 font-bold uppercase tracking-widest text-center mb-2 pb-1 border-b border-slate-800/50">Idoso</span>
+                                      <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                          <span className="absolute left-2 top-1.5 text-[9px] text-slate-500">R$</span>
+                                          <input type="number" placeholder="0.00" value={l.idosoPreco || ""} onChange={(e) => { const a = [...areas]; a[idx].lots[i].idosoPreco = e.target.value; setAreas(a); }} className="bg-slate-900 border border-slate-800 rounded pl-6 pr-2 py-1.5 text-xs text-white font-mono w-full focus:border-amber-500/50 focus:outline-none transition-colors" />
+                                        </div>
+                                        <div className="relative flex-1">
+                                          <input type="number" placeholder="Qtd" value={l.idosoQtd || ""} onChange={(e) => { const a = [...areas]; a[idx].lots[i].idosoQtd = e.target.value; setAreas(a); }} className="bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-white font-mono w-full focus:border-amber-500/50 focus:outline-none transition-colors text-center" />
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>

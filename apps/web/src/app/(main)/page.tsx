@@ -321,21 +321,14 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Preço e Botão */}
-                  <div className="pt-3.5 border-t border-white/10 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-white/40 block">A partir de</span>
-                      <span className="text-base font-extrabold text-white">
-                        {evt.menorPreco ? `R$ ${formatPrice(evt.menorPreco)}` : "—"}
-                      </span>
-                    </div>
-
+                  {/* Botão de Compra */}
+                  <div className="pt-3.5 border-t border-white/10 mt-auto">
                     <button
                       onClick={() => handleBuyTicket(evt)}
-                      className="flex items-center gap-1 px-4 py-2 bg-cyan-400 hover:bg-cyan-300 text-black font-extrabold text-xs rounded-lg transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-cyan-400 hover:bg-cyan-300 text-black font-black text-sm rounded-lg transition-colors cursor-pointer"
                     >
-                      <span>Garantir Bilhete</span>
-                      <ChevronRight className="w-4 h-4" />
+                      <Ticket className="w-4 h-4" />
+                      <span>Ingressos</span>
                     </button>
                   </div>
                 </div>
